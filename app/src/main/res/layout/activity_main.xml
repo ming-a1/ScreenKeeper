@@ -129,7 +129,8 @@
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_keep_screen"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:text="" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -180,7 +181,8 @@
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_low_brightness"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:text="" />
                 </LinearLayout>
 
                 <!-- 亮度滑块 -->
