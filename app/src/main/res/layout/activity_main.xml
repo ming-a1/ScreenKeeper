@@ -132,7 +132,9 @@
                     android:layout_height="wrap_content"
                     android:text=""
                     android:textOn=""
-                    android:textOff="" />
+                    android:textOff=""
+                    app:thumbTint="@color/switch_thumb_color"
+                    app:trackTint="@color/switch_track_color" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -186,7 +188,9 @@
                         android:layout_height="wrap_content"
                         android:text=""
                         android:textOn=""
-                        android:textOff="" />
+                        android:textOff=""
+                        app:thumbTint="@color/switch_thumb_color"
+                        app:trackTint="@color/switch_track_color" />
                 </LinearLayout>
 
                 <!-- 亮度滑块 -->

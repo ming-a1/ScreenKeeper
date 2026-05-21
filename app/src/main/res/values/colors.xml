@@ -9,5 +9,8 @@
     <color name="accent">#FF4CAF50</color>
     <color name="green_active">#FF4CAF50</color>
     <color name="switch_track_off">#FF333333</color>
+    <color name="switch_thumb_off">#FFB0B0B0</color>
+    <color name="switch_track_on">#FF388E3C</color>
+    <color name="switch_thumb_on">#FF4CAF50</color>
     <color name="divider">#FF2A2A2A</color>
 </resources>
