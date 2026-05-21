@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Keeper - 屏幕常亮</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #fff;
+            color: #111;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            padding: 80px 0 48px;
+            text-align: center;
+        }
+
+        .icon {
+            width: 72px;
+            height: 72px;
+            background: #111;
+            border-radius: 18px;
+            margin: 0 auto 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon svg { width: 36px; height: 36px; }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 10px;
+        }
+
+        .desc {
+            font-size: 1rem;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: #999;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 4px 12px;
+        }
+
+        /* Buttons */
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 32px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-dark {
+            background: #111;
+            color: #fff;
+        }
+        .btn-dark:hover { background: #333; }
+
+        .btn-light {
+            background: #f5f5f5;
+            color: #111;
+        }
+        .btn-light:hover { background: #ebebeb; }
+
+        /* Phone */
+        .phone-section {
+            padding: 48px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .phone {
+            width: 280px;
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 32px;
+            padding: 16px;
+        }
+
+        .phone-top {
+            text-align: center;
+            padding: 8px 0 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #111;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #10b981;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-top: 1px solid #f2f2f2;
+        }
+        .row-label { font-size: 0.82rem; color: #333; }
+
+        .toggle {
+            width: 42px;
+            height: 24px;
+            background: #111;
+            border-radius: 12px;
+            position: relative;
+        }
+        .toggle::after {
+            content: '';
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            right: 3px;
+        }
+
+        .slider-track {
+            height: 4px;
+            background: #eee;
+            border-radius: 2px;
+            margin-top: 8px;
+            position: relative;
+        }
+        .slider-fill {
+            width: 65%;
+            height: 100%;
+            background: #111;
+            border-radius: 2px;
+        }
+
+        /* Cards Section */
+        .section {
+            padding: 24px 0;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .feat-card {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+        .feat-card:hover { border-color: #ccc; }
+
+        .feat-icon {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .feat-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .feat-card p {
+            font-size: 0.78rem;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* Permissions */
+        .perm-list {
+            border: 1px solid #eee;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .perm-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid #f2f2f2;
+            font-size: 0.85rem;
+        }
+        .perm-item:last-child { border-bottom: none; }
+
+        .perm-item code {
+            font-size: 0.75rem;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #555;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .perm-item span { color: #666; }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            padding: 24px 0 48px;
+        }
+
+        .tag {
+            font-size: 0.78rem;
+            color: #888;
+            background: #f5f5f5;
+            padding: 6px 14px;
+            border-radius: 8px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 32px 0;
+            border-top: 1px solid #f2f2f2;
+            font-size: 0.8rem;
+            color: #bbb;
+        }
+        footer a { color: #999; text-decoration: none; }
+        footer a:hover { color: #111; }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            header { padding: 60px 0 36px; }
+            h1 { font-size: 1.6rem; }
+            .grid { grid-template-columns: 1fr; }
+            .actions { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <header>
+        <div class="icon">
+            <svg viewBox="0 0 64 64" fill="none">
+                <rect x="14" y="8" width="36" height="48" rx="5" stroke="#fff" stroke-width="2.5"/>
+                <circle cx="32" cy="46" r="3" fill="#fff"/>
+                <path d="M25 22 L32 15 L39 22" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="32" y1="15" x2="32" y2="32" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h1>Screen Keeper</h1>
+        <p class="desc">轻量、低功耗的屏幕常亮应用<br>告别自动息屏，专注不中断</p>
+        <span class="badge">v1.8 · Android 7.0+</span>
+        <div class="actions">
+            <a href="https://github.com/ming-a1/ScreenKeeper/releases" class="btn btn-dark">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                下载 APK
+            </a>
+            <a href="https://github.com/ming-a1/ScreenKeeper" class="btn btn-light">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub
+            </a>
+        </div>
+    </header>
+
+    <!-- Phone -->
+    <section class="phone-section">
+        <div class="phone">
+            <div class="phone-top">Screen Keeper</div>
+            <div class="card">
+                <div class="status">
+                    <span class="dot"></span>
+                    运行中 · 屏幕保持常亮
+                </div>
+                <div class="row">
+                    <span class="row-label">屏幕常亮</span>
+                    <div class="toggle"></div>
+                </div>
+                <div class="row">
+                    <span class="row-label">低亮度模式</span>
+                    <div class="toggle"></div>
+                </div>
+                <div class="row">
+                    <span class="row-label">亮度 65%</span>
+                </div>
+                <div class="slider-track">
+                    <div class="slider-fill"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+        <div class="section-title">功能</div>
+        <div class="grid">
+            <div class="feat-card">
+                <div class="feat-icon">☀️</div>
+                <h3>屏幕常亮</h3>
+                <p>前后台均生效，阅读导航不中断</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🔅</div>
+                <h3>低亮度</h3>
+                <p>亮度可降至 1%，夜间护眼省电</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🎛️</div>
+                <h3>亮度调节</h3>
+                <p>滑块精确控制 1%-100%</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🔄</div>
+                <h3>开机自启</h3>
+                <p>重启自动恢复常亮状态</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🪟</div>
+                <h3>悬浮窗保活</h3>
+                <p>1×1 透明悬浮窗后台常亮</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">📱</div>
+                <h3>广泛兼容</h3>
+                <p>适配主流品牌 Android 7.0+</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Permissions -->
+    <section class="section">
+        <div class="section-title">权限</div>
+        <div class="perm-list">
+            <div class="perm-item">
+                <code>FOREGROUND_SERVICE</code>
+                <span>前台服务保活</span>
+            </div>
+            <div class="perm-item">
+                <code>FOREGROUND_SERVICE_SPECIAL_USE</code>
+                <span>Android 14 服务类型</span>
+            </div>
+            <div class="perm-item">
+                <code>POST_NOTIFICATIONS</code>
+                <span>运行状态通知</span>
+            </div>
+            <div class="perm-item">
+                <code>SYSTEM_ALERT_WINDOW</code>
+                <span>悬浮窗常亮</span>
+            </div>
+            <div class="perm-item">
+                <code>WRITE_SETTINGS</code>
+                <span>调节屏幕亮度</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tags -->
+    <div class="tags">
+        <span class="tag">Android 7.0+</span>
+        <span class="tag">Target SDK 34</span>
+        <span class="tag">约 1.5MB</span>
+        <span class="tag">低功耗</span>
+        <span class="tag">开源</span>
+    </div>
+
+</div>
+
+<footer>
+    <p>Screen Keeper &copy; 2026 · <a href="https://github.com/ming-a1/ScreenKeeper">GitHub</a> · <a href="https://github.com/ming-a1/ScreenKeeper/releases">下载</a></p>
+</footer>
+
+</body>
+</html>
