@@ -1,6 +1,5 @@
 package com.screenkeeper;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -23,7 +22,6 @@ import androidx.appcompat.widget.SwitchCompat;
 public class MainActivity extends AppCompatActivity {
 
     private static final int OVERLAY_PERMISSION_REQUEST = 1001;
-    private static final int WRITE_SETTINGS_REQUEST = 1002;
 
     private SwitchCompat switchKeepScreen;
     private SwitchCompat switchLowBrightness;
@@ -39,11 +37,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 强制亮色模式，忽略系统暗色设置
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         setContentView(R.layout.activity_main);
 
-        // 亮色模式：状态栏深色图标
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(true);
@@ -102,10 +98,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         switchLowBrightness.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked && isActive) {
-                applyLowBrightness();
-            } else if (!isChecked && isActive) {
-                resetBrightness();
+            if (isActive) {
+                sendBrightnessToService();
             }
             saveState();
         });
@@ -113,10 +107,10 @@ public class MainActivity extends AppCompatActivity {
         seekBarBrightness.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                currentBrightness = Math.max(1, progress); // 最低1%亮度
+                currentBrightness = Math.max(1, progress);
                 textBrightnessValue.setText(currentBrightness + "%");
                 if (isActive && switchLowBrightness.isChecked()) {
-                    applyLowBrightness();
+                    sendBrightnessToService();
                 }
             }
 
@@ -131,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startKeepAlive() {
-        // 检查悬浮窗权限（悬浮窗常亮需要此权限）
         if (!Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName()));
@@ -143,10 +136,11 @@ public class MainActivity extends AppCompatActivity {
 
         isActive = true;
 
-        // 启动前台服务
         try {
             Intent serviceIntent = new Intent(this, KeepAliveService.class);
             serviceIntent.setAction(KeepAliveService.ACTION_START);
+            serviceIntent.putExtra(KeepAliveService.EXTRA_LOW_BRIGHTNESS, switchLowBrightness.isChecked());
+            serviceIntent.putExtra(KeepAliveService.EXTRA_BRIGHTNESS_VALUE, currentBrightness);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent);
             } else {
@@ -159,12 +153,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // 设置当前 Activity 的屏幕常亮
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        if (switchLowBrightness.isChecked()) {
-            applyLowBrightness();
-        }
 
         saveState();
         Toast.makeText(this, "✅ 屏幕常亮已开启", Toast.LENGTH_SHORT).show();
@@ -178,37 +167,16 @@ public class MainActivity extends AppCompatActivity {
         startService(serviceIntent);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        resetBrightness();
 
         Toast.makeText(this, "❌ 屏幕常亮已关闭", Toast.LENGTH_SHORT).show();
     }
 
-    private void applyLowBrightness() {
-        // 设置系统亮度
-        try {
-            if (Settings.System.canWrite(this)) {
-                int systemBrightness = (int) (currentBrightness * 2.55f); // 0-255
-                Settings.System.putInt(getContentResolver(),
-                        Settings.System.SCREEN_BRIGHTNESS, systemBrightness);
-            }
-        } catch (Exception e) {
-            // 部分 OEM 设备写入系统亮度会失败，忽略
-        }
-
-        // 通过 WindowManager 设置当前窗口亮度
-        try {
-            WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
-            layoutParams.screenBrightness = currentBrightness / 100f;
-            getWindow().setAttributes(layoutParams);
-        } catch (Exception e) {
-            // 忽略
-        }
-    }
-
-    private void resetBrightness() {
-        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
-        layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
-        getWindow().setAttributes(layoutParams);
+    private void sendBrightnessToService() {
+        Intent intent = new Intent(this, KeepAliveService.class);
+        intent.setAction(KeepAliveService.ACTION_BRIGHTNESS);
+        intent.putExtra(KeepAliveService.EXTRA_LOW_BRIGHTNESS, switchLowBrightness.isChecked());
+        intent.putExtra(KeepAliveService.EXTRA_BRIGHTNESS_VALUE, currentBrightness);
+        startService(intent);
     }
 
     private void updateUI() {
@@ -230,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == OVERLAY_PERMISSION_REQUEST) {
             if (Settings.canDrawOverlays(this)) {
-                switchKeepScreen.setChecked(true); // 重新触发
+                switchKeepScreen.setChecked(true);
             } else {
                 Toast.makeText(this, "需要悬浮窗权限", Toast.LENGTH_SHORT).show();
             }

@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.WindowManager;
 
@@ -22,6 +23,10 @@ public class KeepAliveService extends Service {
 
     public static final String ACTION_START = "com.screenkeeper.START";
     public static final String ACTION_STOP = "com.screenkeeper.STOP";
+    public static final String ACTION_BRIGHTNESS = "com.screenkeeper.BRIGHTNESS";
+    public static final String EXTRA_LOW_BRIGHTNESS = "low_brightness";
+    public static final String EXTRA_BRIGHTNESS_VALUE = "brightness_value";
+
     private static final String CHANNEL_ID = "screen_keeper_channel";
     private static final int NOTIFICATION_ID = 1001;
 
@@ -30,6 +35,10 @@ public class KeepAliveService extends Service {
     private boolean isRunning = false;
     private WindowManager windowManager;
     private android.view.View overlayView;
+    private WindowManager.LayoutParams overlayParams;
+
+    private boolean lowBrightnessEnabled = false;
+    private int brightnessValue = 50;
 
     @Override
     public void onCreate() {
@@ -43,9 +52,15 @@ public class KeepAliveService extends Service {
         if (intent != null) {
             String action = intent.getAction();
             if (ACTION_START.equals(action)) {
+                lowBrightnessEnabled = intent.getBooleanExtra(EXTRA_LOW_BRIGHTNESS, false);
+                brightnessValue = intent.getIntExtra(EXTRA_BRIGHTNESS_VALUE, 50);
                 startKeepAlive();
             } else if (ACTION_STOP.equals(action)) {
                 stopKeepAlive();
+            } else if (ACTION_BRIGHTNESS.equals(action)) {
+                lowBrightnessEnabled = intent.getBooleanExtra(EXTRA_LOW_BRIGHTNESS, lowBrightnessEnabled);
+                brightnessValue = intent.getIntExtra(EXTRA_BRIGHTNESS_VALUE, brightnessValue);
+                applyBrightness();
             }
         }
         return START_STICKY;
@@ -63,22 +78,19 @@ public class KeepAliveService extends Service {
                 startForeground(NOTIFICATION_ID, notification);
             }
         } catch (Exception e) {
-            // 部分 OEM 设备前台服务启动失败，降级处理
             isRunning = false;
             stopSelf();
             return;
         }
 
-        // 创建悬浮窗，保持屏幕常亮（后台也生效）
         createOverlayWindow();
+        applyBrightness();
 
-        // 定期唤醒，防止系统休眠
         keepAliveRunnable = new Runnable() {
             @Override
             public void run() {
                 if (!isRunning) return;
-                // 保持服务活跃
-                handler.postDelayed(this, 30000); // 每30秒唤醒一次
+                handler.postDelayed(this, 30000);
             }
         };
         handler.post(keepAliveRunnable);
@@ -89,9 +101,50 @@ public class KeepAliveService extends Service {
         if (handler != null && keepAliveRunnable != null) {
             handler.removeCallbacks(keepAliveRunnable);
         }
+        resetBrightness();
         removeOverlayWindow();
         stopForeground(true);
         stopSelf();
+    }
+
+    private void applyBrightness() {
+        if (!isRunning) return;
+
+        // 通过悬浮窗设置屏幕亮度（后台生效）
+        if (overlayParams != null && lowBrightnessEnabled) {
+            overlayParams.screenBrightness = brightnessValue / 100f;
+            try {
+                if (overlayView != null && windowManager != null) {
+                    windowManager.updateViewLayout(overlayView, overlayParams);
+                }
+            } catch (Exception e) {
+                // 忽略
+            }
+        }
+
+        // 同时写入系统亮度（需要 WRITE_SETTINGS 权限）
+        if (lowBrightnessEnabled && Settings.System.canWrite(this)) {
+            try {
+                int systemBrightness = (int) (brightnessValue * 2.55f);
+                Settings.System.putInt(getContentResolver(),
+                        Settings.System.SCREEN_BRIGHTNESS, systemBrightness);
+            } catch (Exception e) {
+                // 部分 OEM 设备写入失败，忽略
+            }
+        }
+    }
+
+    private void resetBrightness() {
+        if (overlayParams != null) {
+            overlayParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+            try {
+                if (overlayView != null && windowManager != null) {
+                    windowManager.updateViewLayout(overlayView, overlayParams);
+                }
+            } catch (Exception e) {
+                // 忽略
+            }
+        }
     }
 
     private void createOverlayWindow() {
@@ -99,7 +152,6 @@ public class KeepAliveService extends Service {
         try {
             windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-            // 创建一个 1x1 像素的透明悬浮窗，带 FLAG_KEEP_SCREEN_ON
             overlayView = new android.view.View(this);
             overlayView.setBackgroundColor(Color.TRANSPARENT);
 
@@ -110,21 +162,21 @@ public class KeepAliveService extends Service {
                 layoutType = WindowManager.LayoutParams.TYPE_PHONE;
             }
 
-            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                    1, 1,  // 1x1 像素，几乎不可见
+            overlayParams = new WindowManager.LayoutParams(
+                    1, 1,
                     layoutType,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                             | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                     PixelFormat.TRANSLUCENT);
-            params.gravity = Gravity.TOP | Gravity.START;
-            params.x = 0;
-            params.y = 0;
+            overlayParams.gravity = Gravity.TOP | Gravity.START;
+            overlayParams.x = 0;
+            overlayParams.y = 0;
 
-            windowManager.addView(overlayView, params);
+            windowManager.addView(overlayView, overlayParams);
         } catch (Exception e) {
-            // 悬浮窗创建失败（权限不足或 OEM 限制），不影响服务运行
             overlayView = null;
+            overlayParams = null;
         }
     }
 
@@ -136,6 +188,7 @@ public class KeepAliveService extends Service {
                 // 忽略
             }
             overlayView = null;
+            overlayParams = null;
         }
     }
 
@@ -144,9 +197,13 @@ public class KeepAliveService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
+        String contentText = lowBrightnessEnabled
+                ? "屏幕常亮 · 亮度 " + brightnessValue + "%"
+                : "屏幕保持点亮状态，点击查看详情";
+
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("屏幕常亮中")
-                .setContentText("屏幕保持点亮状态，点击查看详情")
+                .setContentText(contentText)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
